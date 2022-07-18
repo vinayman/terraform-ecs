@@ -2,10 +2,19 @@ resource "aws_ecs_cluster" "main" {
   name = "hello-world-cluster"
 }
 
+resource "aws_cloudwatch_log_group" "log-group" {
+  name = "${var.app_name}-${var.app_environment}-logs"
+
+  tags = {
+    Application = var.app_name
+    Environment = var.app_environment
+  }
+}
+
 resource "aws_ecs_service" "hello_world" {
   name            = "hello-world-service"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.hello_world.arn
+  task_definition = aws_ecs_task_definition.hello_world_task.arn
   desired_count   = var.app_count
   launch_type     = "FARGATE"
 
@@ -23,7 +32,7 @@ resource "aws_ecs_service" "hello_world" {
   depends_on = [aws_lb_listener.hello_world]
 }
 
-resource "aws_ecs_task_definition" "hello_world" {
+resource "aws_ecs_task_definition" "hello_world_task" {
   family                   = "hello-world-app"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -40,6 +49,15 @@ resource "aws_ecs_task_definition" "hello_world" {
     "memory": 2048,
     "name": "hello-world-app",
     "networkMode": "awsvpc",
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${aws_cloudwatch_log_group.log-group.id}",
+        "awslogs-region": "${var.aws_region}",
+        "awslogs-stream-prefix": "${var.app_name}-${var.app_environment}",
+        "awslogs-create-group": "true"
+      }
+    },
     "portMappings": [
       {
         "containerPort": ${var.app_port},

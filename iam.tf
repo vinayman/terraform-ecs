@@ -1,6 +1,6 @@
 resource "aws_iam_role" "hello_world_ecs_agent_task_exec_role" {
   name               = "${var.app_name}-ecs-agent-task-exec-role"
-  assume_role_policy = "${data.aws_iam_policy_document.assume_role_policy.json}"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
   tags = {
     Name        = "${var.app_name}-iam-role"
     Environment = var.app_environment
@@ -14,9 +14,14 @@ data "aws_iam_policy_document" "assume_role_policy" {
 
     principals {
       type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
+      identifiers = ["ecs-tasks.amazonaws.com"]
     }
   }
+}
+
+resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
+  role       = aws_iam_role.hello_world_ecs_agent_task_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 resource "aws_iam_policy" "pull_from_ecr" {
@@ -35,6 +40,9 @@ resource "aws_iam_policy" "pull_from_ecr" {
           "ecr:DescribeImages",
           "ecr:BatchGetImage",
           "ecr:BatchCheckLayerAvailability",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
         ],
         "Effect" : "Allow",
         "Resource" : "*"
